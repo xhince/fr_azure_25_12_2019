@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+    <title>Face Recognition</title>
+    <link rel="stylesheet" href="bootstrap4_3_1.min.css">
+    <link rel="stylesheet" href="jquery-ui.min.css">
+    <script src="jquery-3.4.1.min.js"></script>
+    <script src="jquery-ui.min.js"></script>
+    <script src="htmlson_1_0_0.js"></script>
+    <script src="lib.js"></script>
+    <style>
+        .jsonDataTable {
+            border: 1px solid #ddd;
+        }
+
+        #searchInsideTable {
+            width: 150px;
+            height: 34px;
+            display: inline-block;
+            margin: 0 10px 0 10px;
+        }
+
+        .queryInput {
+            width: 150px;
+            height: 34px;
+            margin-right: 15px;
+            display: inline-block;
+        }
+
+        .searchBox {
+            margin-right: 20px;
+            float: right;
+            display: inline-flex;
+        }
+        .datePicker {
+            margin-right: 20px;
+            float: left;
+            display: inline-flex;
+        }
+
+        .searchLabel {
+            margin: 4px 0 0 0;
+        }
+
+        .queryLabel {
+            width:130px;
+        }
+
+        #clearSearch {
+            line-height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <br/>
+    <div class="container">
+        <div class="input-group mb-3 justify-content-center flex-column">
+            <div style="margin-bottom:10px;">
+                <span class="datePicker">
+                    <label for="user_name" class="queryLabel">User Name: </label>
+                    <input class="h4 text-center form-control queryInput" type="text" id="user_name">
+                </span>
+
+                <span class="datePicker" style="clear: both;">
+                    <label for="datepicker_start" class="queryLabel">Start Date: </label>
+                    <input class="h4 text-center form-control queryInput" type="text" id="datepicker_start">
+                </span>
+
+                <span class="datePicker" style="clear: both;">
+                    <label for="datepicker_end" class="queryLabel">End Date: </label>
+                    <input class="h4 text-center form-control queryInput" type="text" id="datepicker_end">
+                    <button type="button" onclick="getFilteredActivity();" id="submitQuery" class="btn btn-info" style="margin-bottom:4px;">Submit</button>
+                </span>
+
+                <span class="searchBox">
+                    <input type="image" src="excel-icon.png" alt="Convert To Excel" width="32" height="32" onclick="convertToExcelMethod();" style="margin-right:7px;">
+                    <label for="searchInsideTable" class="searchLabel">Search : </label>
+                    <input class="h4 text-center form-control searchInput150" id="searchInsideTable" type="text">
+                    <button type="button" onclick="displayAll('contentTable tr', 'searchInsideTable');" id="clearSearch" class="btn btn-info">Clear</button>
+                </span>
+                <span style="display:none;margin-bottom:10px;color:#FF0000;" id="warningText">
+                    Lutfen en az 1 alani doldurunuz!<br />
+                </span>
+
+            </div>
+            <div id="jsonData">
+                <table class="jsonDataTable table table-bordered table-hover" id="contentTable"></table>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+
+        $(document).ready(function() {
+			$('#searchInsideTable').bind('input', function() {
+				searchHtml('contentTable', 'tr', $(this).val());
+            });
+            $("#datepicker_start").datepicker({
+                changeMonth: true,
+                changeYear: true
+            });
+            $("#datepicker_end").datepicker({
+                changeMonth: true,
+                changeYear: true
+            });
+        });
+
+        var socket = io();
+
+        function getAllActivity() {
+            socket.emit('getAllServer');
+        }
+
+        var jsonData = "";
+        socket.on('getAllClient', function (data) {
+            jsonData = data.jsonResult;
+            console.log(jsonData);
+            var myTable = $('.jsonDataTable').htmlson({
+                data: jsonData,
+                headers: {
+                    0: 'USER NAME',
+                    1: 'ENTRY DATE',
+                    2: 'EXIT DATE',
+                    3: 'TOTAL WORK TIME(m)',
+                    4: 'SODEXO',
+                    5: 'GECIKME DURUMU'
+                }
+            });
+            sodexo_display();
+        });
+        getAllActivity();
+
+        function getFilteredActivity() {
+
+            var user_name = document.getElementById("user_name").value;
+            var datepicker_start = document.getElementById("datepicker_start").value;            
+            var datepicker_end = document.getElementById("datepicker_end").value;
+            if (!(user_name || datepicker_start || datepicker_end))
+                document.getElementById("warningText").style.display = "block";
+            else {
+                socket.emit('getFilteredServer', { user: user_name, start_date: datepicker_start, end_date: datepicker_end });
+                document.getElementById("user_name").value = "";
+                document.getElementById("datepicker_start").value = "";
+                document.getElementById("datepicker_end").value = "";
+                document.getElementById("warningText").style.display = "none";
+            }
+        }
+
+        socket.on('getFilteredClient', function (data) {
+            jsonData = data.jsonResult;
+            console.log(jsonData);
+            var myTable = $('.jsonDataTable').htmlson({
+                data: jsonData,
+                headers: {
+                    0: 'USER NAME',
+                    1: 'ENTRY DATE',
+                    2: 'EXIT DATE',
+                    3: 'TOTAL WORK TIME(m)',
+                    4: 'SODEXO',
+                    5: 'GECIKME DURUMU'
+                }
+            });
+            sodexo_display();
+        });
+        socket.on('convertToExcelClient', function (data) {
+            setTimeout(function() {
+                downloadExcel();
+            }, 1000);
+            
+        });
+        
+        function convertToExcelMethod() {
+            socket.emit('convertToExcelServer', { jsonData });
+        }
+
+        function downloadExcel() {
+            window.location.href = 'UserList.xlsx';
+        }
+
+        function sodexo_display() {
+            $('.jsonDataTable tr td').each(function() {
+                var text = $(this).text();
+                if (text == "Uygun Degil" || text == "Gec Geldi")
+                    $(this).css('color', 'red');
+                if (text == "Hak Kazandi") {
+                    $(this).css('color', 'green');
+                    $(this).css('font-weight', 'bold');
+                }
+            });
+        }
+
+    </script>
+
+    <script src="popper_1_14_7.min.js"></script>
+    <script src="bootstrap_4_3_1.min.js"></script>
+
+</body>
+</html>

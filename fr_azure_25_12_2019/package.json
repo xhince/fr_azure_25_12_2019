@@ -1,0 +1,15 @@
+{
+  "name": "fr_azure_25_12_2019",
+  "version": "0.0.0",
+  "description": "fr_azure_25_12_2019",
+  "main": "app.js",
+  "author": {
+    "name": ""
+  },
+  "dependencies": {
+    "exceljs": "^3.5.0",
+    "express": "^4.17.1",
+    "mysql": "^2.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
