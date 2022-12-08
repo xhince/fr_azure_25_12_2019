@@ -18,7 +18,7 @@
   "homepage": "https://github.com/xhince/fr_azure_25_12_2019#readme",
   "dependencies": {
     "exceljs": "^3.5.0",
-    "express": "^4.17.1",
+    "express": "^4.18.2",
     "mysql": "^2.17.1",
     "socket.io": "^2.3.0"
   }
